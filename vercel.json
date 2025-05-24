@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "headers": [
     {
-      "source": "/",
+      "source": "/(.*)", // 改为 "/(.*)" 以匹配所有路径
       "headers": [
         {
           "key": "Cache-Control",
@@ -10,7 +10,11 @@
         },
         {
           "key": "X-Frame-Options",
-          "value": "DENY"
+          "value": "SAMEORIGIN" // 修改：从 DENY 改为 SAMEORIGIN
+        },
+        {
+          "key": "Content-Security-Policy", // 添加：CSP frame-ancestors
+          "value": "frame-ancestors 'self' https://api.imxj.top;"
         },
         {
           "key": "X-XSS-Protection",
@@ -28,3 +32,4 @@
     }
   ]
 }
+
