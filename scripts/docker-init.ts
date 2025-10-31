@@ -42,7 +42,7 @@ function safeReplace(
 ): { content: string; replaced: boolean } {
   // 尝试替换 JS 对象字面量格式（Next.js 16）
   if (content.includes(oldConfigJsObject)) {
-    const result = content.split(oldConfigJsObject).join(newConfigJsObject);
+    const result = content.replaceAll(oldConfigJsObject, newConfigJsObject);
     return { content: result, replaced: true };
   }
 
