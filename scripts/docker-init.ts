@@ -48,7 +48,7 @@ function safeReplace(
 
   // 回退：尝试替换 JSON 格式（Next.js 15）
   if (content.includes(oldConfigJson)) {
-    const result = content.split(oldConfigJson).join(newConfigJson);
+    const result = content.replaceAll(oldConfigJson, newConfigJson);
     return { content: result, replaced: true };
   }
 
