@@ -75,7 +75,7 @@ RUN apk add --no-cache curl dumb-init && \
 # 创建最小化的 package.json 只包含运行时依赖
 # 包括 serverExternalPackages 声明的包：sharp, cheerio, markdown-it, sanitize-html
 # 以及 generate 脚本需要的：zod, json5, dotenv, chalk
-RUN bun add --production sharp cheerio markdown-it sanitize-html zod json5 dotenv chalk
+RUN bun add --no-cache --production sharp cheerio markdown-it sanitize-html zod json5 dotenv chalk
 
 # 从 builder 复制构建产物
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/ ./
