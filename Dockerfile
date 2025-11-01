@@ -70,7 +70,11 @@ ENV PORT=${PORT} \
 # 安装运行时需要的工具（healthcheck 用）
 RUN apk add --no-cache curl dumb-init && \
     addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001
+    adduser -S nextjs -u 1001 && \
+    chown -R nextjs:nodejs /app
+
+# 切换到非 root 用户
+USER nextjs
 
 # 创建最小化的 package.json 只包含运行时依赖
 # 包括 serverExternalPackages 声明的包：sharp, cheerio, markdown-it, sanitize-html
@@ -79,14 +83,11 @@ RUN bun add --no-cache --production sharp cheerio markdown-it sanitize-html zod 
 
 # 从 builder 复制构建产物
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/ ./
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/config ./config
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 COPY --from=builder --chown=nextjs:nodejs /app/utils ./utils
-
-# 切换到非 root 用户
-USER nextjs
 
 EXPOSE ${PORT}
 
