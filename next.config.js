@@ -124,7 +124,7 @@ const productionConfig = {
   serverExternalPackages: ['sharp', 'cheerio', 'markdown-it', 'sanitize-html'],
 
   async headers() {
-    // Parse ALLOW_EMBEDDING: supports origin list (comma-separated), 'true' (allow all), or unset (block all)
+    // Parse ALLOW_EMBEDDING: false/unset=block, true=allow all, or comma-separated origin list
     const allowEmbedding = process.env.ALLOW_EMBEDDING;
 
     const baseHeaders = [
@@ -142,46 +142,38 @@ const productionConfig = {
       },
     ];
 
-    if (!allowEmbedding) {
-      // Default: block iframe embedding
+    if (!allowEmbedding || allowEmbedding === 'false') {
+      // Block iframe embedding (default)
       baseHeaders.push({
         key: 'X-Frame-Options',
         value: 'SAMEORIGIN',
       });
     } else if (allowEmbedding === 'true') {
-      // Allow all origins (not recommended, use with caution)
+      // Allow all origins (not recommended, security risk)
       baseHeaders.push({
         key: 'Content-Security-Policy',
         value: "frame-ancestors 'self' *;",
       });
     } else {
-      // Parse comma-separated origin list and build CSP
+      // Parse comma-separated origin list, auto-add 'self'
       const origins = allowEmbedding
         .split(',')
         .map((origin) => origin.trim())
         .filter(Boolean);
 
-      if (origins.length === 0) {
-        baseHeaders.push({
-          key: 'X-Frame-Options',
-          value: 'SAMEORIGIN',
-        });
-      } else {
-        const frameAncestors = origins
-          .map((origin) => {
-            if (origin === "'self'") return "'self'";
-            if (origin === 'none') return "'none'";
-            // Add protocol if missing
-            if (!origin.startsWith('http')) return `https://${origin}`;
-            return origin;
-          })
-          .join(' ');
+      // Normalize origins: add https:// protocol if missing
+      const normalizedOrigins = origins.map((origin) => {
+        if (origin.startsWith('http')) return origin;
+        return `https://${origin}`;
+      });
 
-        baseHeaders.push({
-          key: 'Content-Security-Policy',
-          value: `frame-ancestors ${frameAncestors};`,
-        });
-      }
+      // Always include 'self' in allowed origins
+      const frameAncestors = `'self' ${normalizedOrigins.join(' ')}`;
+
+      baseHeaders.push({
+        key: 'Content-Security-Policy',
+        value: `frame-ancestors ${frameAncestors};`,
+      });
     }
 
     return [
