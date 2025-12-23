@@ -1,7 +1,10 @@
 # ============================================
 # Build stage
 # ============================================
-FROM oven/bun:1.2-alpine AS builder
+FROM node:20-alpine AS builder
+
+RUN npm install -g bun@latest
+
 WORKDIR /app
 
 # 构建时固定的环境变量
@@ -21,7 +24,7 @@ COPY package.json bun.lock ./
 COPY scripts ./scripts
 COPY utils ./utils
 
-# 安装依赖
+# 使用 Bun 安装依赖
 RUN set -e && \
     echo "Installing dependencies..." && \
     bun install --frozen-lockfile || { echo "Failed to install dependencies"; exit 1; }
@@ -29,18 +32,22 @@ RUN set -e && \
 # 复制源代码
 COPY . .
 
-# 构建应用
+# 使用 Node.js 构建应用
 RUN set -e && \
     echo "Starting build process..." && \
-    bun run build || { echo "Build failed"; exit 1; }
+    bun run generate && \
+    npx next build || { echo "Build failed"; exit 1; }
 
 
 
 # ============================================
 # Runtime stage
 # ============================================
-FROM oven/bun:1.2-alpine
+FROM node:20-alpine
 WORKDIR /app
+
+# 安装 Bun 用于生成配置和运行初始化脚本
+RUN npm install -g bun@latest
 
 # 运行时的所有 ARG 和 ENV 配置
 ARG PORT=3000
@@ -68,7 +75,8 @@ ENV PORT=${PORT} \
   FEATURE_TITLE=${FEATURE_TITLE} \
   FEATURE_DESCRIPTION=${FEATURE_DESCRIPTION} \
   FEATURE_ICON=${FEATURE_ICON} \
-  ALLOW_EMBEDDING=${ALLOW_EMBEDDING}
+  ALLOW_EMBEDDING=${ALLOW_EMBEDDING} \
+  IS_DOCKER=${IS_DOCKER}
 
 # 安装运行时需要的工具（healthcheck 用）
 RUN apk add --no-cache curl dumb-init && \
@@ -84,7 +92,7 @@ USER nextjs
 # 以及 generate 脚本需要的：zod, json5, dotenv, chalk
 RUN bun add --no-cache --production sharp cheerio markdown-it sanitize-html zod json5 dotenv chalk
 
-# 从 builder 复制构建产物
+# 从 builder 复制构建产物（standalone 输出）
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone/ ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
@@ -99,5 +107,6 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
     CMD curl -f http://localhost:${PORT}/api/health || exit 1
 
 # 使用 dumb-init 作为 PID 1，正确处理信号
+# 使用 Node.js 运行 standalone 服务器 (缓解 worker_threads napi 兼容性问题)
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["bun", "run", "start:docker"]
+CMD ["sh", "-c", "bun run generate && node server.js"]
