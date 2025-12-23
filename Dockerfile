@@ -13,7 +13,8 @@ ENV NODE_ENV=production \
   FEATURE_SHOW_STAR_BUTTON=true \
   FEATURE_TITLE="Uptime Kuma" \
   FEATURE_DESCRIPTION="A beautiful and modern uptime monitoring dashboard" \
-  FEATURE_ICON=""
+  FEATURE_ICON="" \
+  ALLOW_EMBEDDING=false
 
 # 复制依赖文件
 COPY package.json bun.lock ./
@@ -53,6 +54,7 @@ ARG FEATURE_SHOW_STAR_BUTTON=true
 ARG FEATURE_TITLE="Uptime Kuma"
 ARG FEATURE_DESCRIPTION="A beautiful and modern uptime monitoring dashboard"
 ARG FEATURE_ICON=
+ARG ALLOW_EMBEDDING=false
 ARG IS_DOCKER=true
 
 ENV PORT=${PORT} \
@@ -65,7 +67,8 @@ ENV PORT=${PORT} \
   FEATURE_SHOW_STAR_BUTTON=${FEATURE_SHOW_STAR_BUTTON} \
   FEATURE_TITLE=${FEATURE_TITLE} \
   FEATURE_DESCRIPTION=${FEATURE_DESCRIPTION} \
-  FEATURE_ICON=${FEATURE_ICON}
+  FEATURE_ICON=${FEATURE_ICON} \
+  ALLOW_EMBEDDING=${ALLOW_EMBEDDING}
 
 # 安装运行时需要的工具（healthcheck 用）
 RUN apk add --no-cache curl dumb-init && \
