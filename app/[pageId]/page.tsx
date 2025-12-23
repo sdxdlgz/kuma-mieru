@@ -20,7 +20,7 @@ export async function generateStaticParams() {
 export default async function StatusPageRoute({
   params,
 }: {
-  params: Promise<{ pageId: string }>;
+  params: Promise<{ pageId: string }> | { pageId: string };
 }) {
   const { pageId } = await params;
   const pageConfig = getConfig(pageId);
