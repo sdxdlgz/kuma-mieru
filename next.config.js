@@ -124,27 +124,70 @@ const productionConfig = {
   serverExternalPackages: ['sharp', 'cheerio', 'markdown-it', 'sanitize-html'],
 
   async headers() {
+    // Parse ALLOW_EMBEDDING: supports origin list (comma-separated), 'true' (allow all), or unset (block all)
+    const allowEmbedding = process.env.ALLOW_EMBEDDING;
+
+    const baseHeaders = [
+      {
+        key: 'X-Content-Type-Options',
+        value: 'nosniff',
+      },
+      {
+        key: 'X-XSS-Protection',
+        value: '1; mode=block',
+      },
+      {
+        key: 'Cache-Control',
+        value: 'public, max-age=300, stale-while-revalidate=60',
+      },
+    ];
+
+    if (!allowEmbedding) {
+      // Default: block iframe embedding
+      baseHeaders.push({
+        key: 'X-Frame-Options',
+        value: 'SAMEORIGIN',
+      });
+    } else if (allowEmbedding === 'true') {
+      // Allow all origins (not recommended, use with caution)
+      baseHeaders.push({
+        key: 'Content-Security-Policy',
+        value: "frame-ancestors 'self' *;",
+      });
+    } else {
+      // Parse comma-separated origin list and build CSP
+      const origins = allowEmbedding
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+
+      if (origins.length === 0) {
+        baseHeaders.push({
+          key: 'X-Frame-Options',
+          value: 'SAMEORIGIN',
+        });
+      } else {
+        const frameAncestors = origins
+          .map((origin) => {
+            if (origin === "'self'") return "'self'";
+            if (origin === 'none') return "'none'";
+            // Add protocol if missing
+            if (!origin.startsWith('http')) return `https://${origin}`;
+            return origin;
+          })
+          .join(' ');
+
+        baseHeaders.push({
+          key: 'Content-Security-Policy',
+          value: `frame-ancestors ${frameAncestors};`,
+        });
+      }
+    }
+
     return [
       {
         source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'SAMEORIGIN',
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block',
-          },
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=300, stale-while-revalidate=60',
-          },
-        ],
+        headers: baseHeaders,
       },
       {
         source: '/api/(.*)',
